@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Documentos</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="container">
+        <h1>Gerador de Termos</h1>
+        <form action="/processar" method="post" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="excel_file">1. Lista de Dados (.xlsx):</label>
+                <input type="file" id="excel_file" name="excel_file" accept=".xlsx, .xls" required>
+            </div>
+            <div class="form-group">
+                <label for="template_file">2. Modelo do Documento (.docx):</label>
+                <input type="file" id="template_file" name="template_file" accept=".docx" required>
+            </div>
+            <button type="submit">Gerar Documentos</button>
+        </form>
+    </div>
+</body>
+</html>
