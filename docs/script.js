@@ -20,8 +20,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         const extractorCode = await (await fetch('./extractor.py')).text();
         const mainPythonCode = await (await fetch('./main.py')).text();
+        pyodide.FS.writeFile("extractor.py", extractorCode, { encoding: "utf8" });
+        pyodide.FS.writeFile("main.py", mainPythonCode, { encoding: "utf8" });
+
+        /*
+        const extractorCode = await (await fetch('./extractor.py')).text();
+        const mainPythonCode = await (await fetch('./main.py')).text();
         pyodide.runPython(extractorCode);
         pyodide.runPython(mainPythonCode);
+        */
 
         log("Ambiente pronto!");
         sendButton.disabled = false;
