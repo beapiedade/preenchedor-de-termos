@@ -17,10 +17,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         const pyodide = await loadPyodide();
         await pyodide.loadPackage(["pandas", "micropip", "lxml"]);
 
+        await micropip.install(["openpyxl", "python-docx", "docxtpl"]);
         const micropip = pyodide.pyimport("micropip");
-        const pythonDocxDeps = pyodide.toPy([]);
         await micropip.install(["openpyxl", "docxtpl"]);
-        await micropip.install(["python-docx"], { deps: pythonDocxDeps });
+        await micropip.install("python-docx", { deps: false });
 
         const extractorCode = await (await fetch('./extractor.py')).text();
         const factoryCode = await (await fetch('./factory.py')).text();
