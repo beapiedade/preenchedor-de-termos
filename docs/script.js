@@ -18,11 +18,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         const micropip = pyodide.pyimport("micropip");
         await micropip.install("openpyxl");
         
+        pyodide.FS.mkdirTree("backend");
         const extractorCode = await (await fetch('./backend/extractor.py')).text();
         const mainPythonCode = await (await fetch('./backend/main.py')).text();
-        pyodide.runPython(extractorCode);
-        pyodide.runPython(mainPythonCode);
 
+        pyodide.FS.writeFile("backend/extractor.py", extractorCode, { encoding: "utf8" });
+        pyodide.FS.writeFile("backend/main.py", mainPythonCode, { encoding: "utf8" });
+
+        pyodide.runPython(`
+            import sys
+            sys.path.append('.')
+        `);
+        
         log("Ambiente pronto!");
         sendButton.disabled = false;
         return pyodide;
