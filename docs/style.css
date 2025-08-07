@@ -67,11 +67,11 @@ input[type="file"] {
 
 #form_log { 
     margin-top: 20px; 
+    border: 15px solid #eee;
     background: #eee; 
     border-radius: 6px; 
-    padding: 15px; 
     text-align: left; 
-    max-height: 200px; 
+    height: 90px; 
     overflow-y: scroll; 
     white-space: pre-wrap; 
     word-wrap: break-word; 

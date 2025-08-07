@@ -23,13 +23,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         pyodide.FS.writeFile("extractor.py", extractorCode, { encoding: "utf8" });
         pyodide.FS.writeFile("main.py", mainPythonCode, { encoding: "utf8" });
 
-        /*
-        const extractorCode = await (await fetch('./extractor.py')).text();
-        const mainPythonCode = await (await fetch('./main.py')).text();
-        pyodide.runPython(extractorCode);
-        pyodide.runPython(mainPythonCode);
-        */
-
         log("Ambiente pronto!");
         sendButton.disabled = false;
         return pyodide;
@@ -38,12 +31,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     sendButton.addEventListener('click', async () => {
         if (!excelInput.files.length || !docxInput.files.length) {
-            log("\nPor favor, selecione os dois arquivos.");
+            log("Por favor, selecione os dois arquivos.");
             return;
         }
 
         sendButton.disabled = true;
-        logDiv.innerHTML = '';
 
         try {
             log("Lendo modelo...");
@@ -55,9 +47,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             const excelBuffer = await excelFile.arrayBuffer();
             
             const pyodide = await pyodideReadyPromise;
-            const extractFiles = pyodide.globals.get('extractFiles');
+
+            const mainModule = pyodide.pyimport("main"); 
+            const extractFiles = mainModule.extractFiles;
             const pythonReturn = await extractFiles(excelBuffer);
-            const data = pythonReturn.toJs({ dict_converter: Object.fromEntries });
+            const data = pythonReturn[0].toJs({ dict_converter: Object.fromEntries });
+            const errors = pythonReturn[1].toJs({ dict_converter: Object.fromEntries });
             pythonReturn.destroy();
 
             log(`Encontrados ${data.length} registros válidos!`);
@@ -83,6 +78,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     log(`ERRO ao renderizar documento para ${row.VAR_NOME}: ${error.message}`);
                     console.error("Erro do Docxtemplater:", error);
                 }
+            }
+
+            for (const error of errors) {
+                log(`Registro inválido: ${error[2] || "Sem nome"}`);
             }
 
             log("Compactando todos os arquivos...");
