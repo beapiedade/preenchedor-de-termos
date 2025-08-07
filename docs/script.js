@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         await micropip.install("openpyxl");
         
         const extractorCode = await (await fetch('./backend/extractor.py')).text();
-        const mainPythonCode = await (await fetch('./bakcend/main.py')).text();
+        const mainPythonCode = await (await fetch('./backend/main.py')).text();
         pyodide.runPython(extractorCode);
         pyodide.runPython(mainPythonCode);
 
