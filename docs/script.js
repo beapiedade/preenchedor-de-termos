@@ -1,5 +1,4 @@
-document.addEventListener('DOMContentLoaded', () => {
-
+document.addEventListener('DOMContentLoaded', async () => {
     const excelInput = document.getElementById('excel_file');
     const docxInput = document.getElementById('docx_file');
     const sendButton = document.getElementById('form_button');
@@ -10,6 +9,24 @@ document.addEventListener('DOMContentLoaded', () => {
         logDiv.scrollTop = logDiv.scrollHeight;
     }
 
+    log("Carregando ambiente...");
+    sendButton.disabled = true;
+    sendButton.textContent = "Carregando";
+
+    const pyodide = await loadPyodide();
+    await pyodide.loadPackage(["pandas", "openpyxl", "python-docx", "docxtpl"]);
+
+    const extractorCode = await (await fetch('./backend/extractor.py')).text();
+    pyodide.runPython(extractorCode);
+    const factoryCode = await (await fetch('./backend/factory.py')).text();
+    pyodide.runPython(factoryCode);
+    const mainPythonCode = await (await fetch('./backend/main_python.py')).text();
+    pyodide.runPython(mainPythonCode);
+
+    log("Ambiente pronto!");
+    sendButton.disabled = false;
+    sendButton.textContent = "Gerar Documentos";
+
     sendButton.addEventListener('click', async () => {
         if (!excelInput.files.length || !docxInput.files.length) {
             log("\nPor favor, selecione os dois arquivos.");
@@ -17,57 +34,46 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         sendButton.disabled = true;
-        sendButton.textContent = "Processando...";
-        logDiv.innerHTML = '';
+        log("Iniciando processamento...");
 
         try {
-            log("Lendo modelo...");
-            const templateFile = docxInput.files[0];
-            const templateBuffer = await templateFile.arrayBuffer();
-            log("Modelo lido com sucesso!");
-
-            log("Lendo planilha...");
             const excelFile = excelInput.files[0];
             const excelBuffer = await excelFile.arrayBuffer();
-            const workbook = XLSX.read(excelBuffer, { type: 'array' });
-            const sheetName = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[sheetName];
-            const data = XLSX.utils.sheet_to_json(worksheet);
-            log(`Encontrados ${data.length} registros!`);
-
-            log("Iniciando geração de documentos...");
-            const zip = new PizZip();
+            const templateFile = docxInput.files[0];
+            const templateBuffer = await templateFile.arrayBuffer();
             
-            for (const row of data) {
-                const doc = new docxtemplater(new PizZip(templateBuffer), {
-                    paragraphLoop: true,
-                    linebreaks: true,
-                });
+            log("Enviando arquivos para o ambiente Python...");
+            
+            const generate = pyodide.globals.get("generate");
+            const generatedData = await generate(excelBuffer, templateBuffer);
 
-                doc.setData(row);
+            const finalData = generatedData.get('arquivos').toJs();
+            const nomesComErro = generatedData.get('erros').toJs();
+            generatedData.destroy(); // Limpa a memória
 
-                try {
-                    doc.render();
-                    log(`- Documento gerado para: ${row.VAR_NOME || 'Registro sem nome'}`);
-                    const outputBlob = doc.getZip().generate({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-                    
-                    const fileName = `${(row.VAR_NOME || 'documento').toString().replace(/ /g, '_')}.docx`;
-                    zip.file(fileName, outputBlob);
+            log("Processamento finalizado!");
 
-                } catch (error) {
-                    log(`ERRO ao renderizar o documento para ${row.VAR_NOME}: ${error.message}`);
+            if (finalData.size > 0) {
+                log("Compactando arquivos gerados...");
+                const zip = new PizZip();
+                for (const [fileName, fileContent] of finalData) {
+                    log(`- Adicionando: ${fileName}`);
+                    zip.file(fileName, fileContent);
                 }
+                const zipBlob = zip.generate({ type: 'blob' });
+                saveAs(zipBlob, 'documentos_gerados.zip');
+                log("Download iniciado!");
             }
 
-            log("Compactando todos os arquivos...");
-            const zipBlob = zip.generate({ type: 'blob' });
-            saveAs(zipBlob, 'documentos_gerados.zip');
-            log("Download iniciado!");
+            if (nomesComErro.length > 0) {
+                log("\nRegistros com erro encontrados:");
+                nomesComErro.forEach(nome => log(`- ${nome}`));
+            }
 
         } catch (error) {
             log(`ERRO GERAL: ${error.message}`);
             console.error(error);
-
+            log("Processamento interrompido.");
         } finally {
             sendButton.disabled = false;
             sendButton.textContent = "Gerar Documentos";
