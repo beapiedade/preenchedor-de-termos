@@ -10,3 +10,5 @@ def extractFiles(excel_bytes):
     dictionaries = [dict(zip(headers, row)) for row in excel_data]
 
     return dictionaries
+
+__main__.extractFiles = extractFiles
