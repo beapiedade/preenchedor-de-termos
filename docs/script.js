@@ -40,7 +40,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             log("Lendo modelo...");
             const templateFile = docxInput.files[0];
-            const templateBuffer = await templateFile.arrayBuffer();
+            const templateBuffer = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = (e) => reject(e.target.error);
+                reader.readAsArrayBuffer(templateFile);
+            });
 
             log("Lendo planilha...");
             const excelFile = excelInput.files[0];
@@ -59,33 +64,35 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (data.length === 0) throw new Error("Nenhum dado válido encontrado na planilha.");
 
             log("Gerando documentos...");
-            const zip = new PizZip();
-            
+            const finalZip = new PizZip();
+            const templateZip = new PizZip(templateBuffer);
+            console.log(data);
+            console.log(errors);
             for (const row of data) {
-                const doc = new docxtemplater(new PizZip(templateBuffer), {
+                const doc = new docxtemplater(templateZip, {
                     paragraphLoop: true,
                     linebreaks: true,
+                    delimiters: {
+                        start: '{',
+                        end: '}'
+                    }
                 });
-                doc.setData(row);
                 
+                doc.setData(row);
+
                 try {
                     doc.render();
-                    const outputBlob = doc.getZip().generate({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+                    const outputBlob = doc.getZip().generate({ type: 'blob' });
                     const fileName = `${(row.VAR_NOME || 'documento').toString().replace(/ /g, '_')}.docx`;
-                    zip.file(fileName, outputBlob);
-                    log(`- Documento gerado para: ${row.VAR_NOME}`);
+                    finalZip.file(fileName, outputBlob);
                 } catch (error) {
                     log(`ERRO ao renderizar documento para ${row.VAR_NOME}: ${error.message}`);
                     console.error("Erro do Docxtemplater:", error);
                 }
             }
 
-            for (const error of errors) {
-                log(`Registro inválido: ${error[2] || "Sem nome"}`);
-            }
-
             log("Compactando todos os arquivos...");
-            const zipBlob = zip.generate({ type: 'blob' });
+            const zipBlob = finalZip.generate({ type: 'blob' });
             saveAs(zipBlob, 'documentos_gerados.zip');
             log("Download iniciado!");
 
