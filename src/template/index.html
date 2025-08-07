@@ -3,24 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gerador de Documentos</title>
     <link rel="stylesheet" href="style.css">
-</head>
 
-<body>
-    <div class="container">
-        <h1>Gerador de Termos</h1>
-        <form action="/processar" method="post" enctype="multipart/form-data">
-            <div class="form-group">
-                <label for="excel_file">1. Lista de Dados (.xlsx):</label>
-                <input type="file" id="excel_file" name="excel_file" accept=".xlsx, .xls" required>
-            </div>
-            <div class="form-group">
-                <label for="template_file">2. Modelo do Documento (.docx):</label>
-                <input type="file" id="template_file" name="template_file" accept=".docx" required>
-            </div>
-            <button type="submit">Gerar Documentos</button>
-        </form>
+    <title>Gerador de TEC/D</title>
+
+    <body>
+    <div class="form_container">
+        <h1>Gerador de TEC/D</h1>
+
+        <div class="form_section">
+            <label for="excel_file">1. Lista de Nomes:</label>
+            <input type="file" id="excel_file" accept=".xlsx, .xls">
+        </div>
+        <div class="form_section">
+            <label for="docx_file">2. Modelo do Documento:</label>
+            <input type="file" id="docx_file" accept=".docx">
+        </div>
+
+        <button id="form_button">Gerar Documentos</button>
+        <div id="form_log">Aguardando arquivos...</div>
     </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://unpkg.com/docxtemplater@3.47.1/build/docxtemplater-pizzip.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+    <script src="script.js" defer></script>
 </body>
 </html>
