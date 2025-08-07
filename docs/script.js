@@ -6,13 +6,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const logDiv = document.getElementById('form_log');
 
     function log(message) {
-        logDiv.innerHTML += '\n' + message;
+        logDiv.innerHTML += message + '\n';
         logDiv.scrollTop = logDiv.scrollHeight;
     }
 
     sendButton.addEventListener('click', async () => {
         if (!excelInput.files.length || !docxInput.files.length) {
-            log("Por favor, selecione os dois arquivos.");
+            log("\nPor favor, selecione os dois arquivos.");
             return;
         }
 
