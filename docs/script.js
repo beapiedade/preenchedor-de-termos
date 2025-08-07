@@ -53,8 +53,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const templateFile = docxInput.files[0];
             const templateBuffer = await templateFile.arrayBuffer();
             
-            log("Enviando arquivos para o ambiente Python...");
-            
             const generate = pyodide.globals.get("generate");
             const generatedData = await generate(excelBuffer, templateBuffer);
 
