@@ -17,7 +17,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         const pyodide = await loadPyodide();
         await pyodide.loadPackage(["pandas", "micropip", "lxml"]);
 
-        await micropip.install(["openpyxl", "python-docx", "docxtpl"]);
         const micropip = pyodide.pyimport("micropip");
         await micropip.install(["openpyxl", "docxtpl"]);
         await micropip.install("python-docx", { deps: false });
