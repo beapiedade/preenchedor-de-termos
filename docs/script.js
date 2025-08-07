@@ -12,29 +12,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function setupPyodide() {
         log("\nCarregando ambiente...");
         sendButton.disabled = true;
-        sendButton.textContent = "Carregando";
 
         const pyodide = await loadPyodide();
-        await pyodide.loadPackage(["pandas", "micropip", "lxml"]);
-
+        await pyodide.loadPackage(["pandas", "micropip"]);
         const micropip = pyodide.pyimport("micropip");
-        await micropip.install(["openpyxl", "docxtpl"]);
-        await micropip.install("python-docx", { deps: false });
-
+        await micropip.install("openpyxl");
+        
         const extractorCode = await (await fetch('./extractor.py')).text();
-        const factoryCode = await (await fetch('./factory.py')).text();
         const mainPythonCode = await (await fetch('./main_python.py')).text();
         pyodide.runPython(extractorCode);
-        pyodide.runPython(factoryCode);
         pyodide.runPython(mainPythonCode);
 
         log("Ambiente pronto!");
         sendButton.disabled = false;
-        sendButton.textContent = "Gerar Documentos";
-            
         return pyodide;
     }
-
     const pyodideReadyPromise = setupPyodide();
 
     sendButton.addEventListener('click', async () => {
@@ -44,49 +36,59 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         sendButton.disabled = true;
-        log("Iniciando processamento...");
+        logDiv.innerHTML = '';
 
         try {
-            const pyodide = await pyodideReadyPromise;
-
-            const excelFile = excelInput.files[0];
-            const excelBuffer = await excelFile.arrayBuffer();
+            log("Lendo modelo...");
             const templateFile = docxInput.files[0];
             const templateBuffer = await templateFile.arrayBuffer();
+
+            log("Lendo planilha...");
+            const excelFile = excelInput.files[0];
+            const excelBuffer = await excelFile.arrayBuffer();
             
-            const generate = pyodide.globals.get("generate");
-            const generatedData = await generate(excelBuffer, templateBuffer);
+            const pyodide = await pyodideReadyPromise;
+            const extractFiles = pyodide.globals.get('extractFiles');
+            const pythonReturn = await extractFiles(excelBuffer);
+            const data = pythonReturn.toJs({ dict_converter: Object.fromEntries });
+            pythonReturn.destroy();
 
-            const finalData = generatedData.get('arquivos').toJs();
-            const nomesComErro = generatedData.get('erros').toJs();
-            generatedData.destroy(); // Limpa a memória
+            log(`Encontrados ${data.length} registros válidos!`);
+            if (data.length === 0) throw new Error("Nenhum dado válido encontrado na planilha.");
 
-            log("Processamento finalizado!");
-
-            if (finalData.size > 0) {
-                log("Compactando arquivos gerados...");
-                const zip = new PizZip();
-                for (const [fileName, fileContent] of finalData) {
-                    log(`- Adicionando: ${fileName}`);
-                    zip.file(fileName, fileContent);
+            log("Gerando documentos...");
+            const zip = new PizZip();
+            
+            for (const row of data) {
+                const doc = new docxtemplater(new PizZip(templateBuffer), {
+                    paragraphLoop: true,
+                    linebreaks: true,
+                });
+                doc.setData(row);
+                
+                try {
+                    doc.render();
+                    const outputBlob = doc.getZip().generate({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+                    const fileName = `${(row.VAR_NOME || 'documento').toString().replace(/ /g, '_')}.docx`;
+                    zip.file(fileName, outputBlob);
+                    log(`- Documento gerado para: ${row.VAR_NOME}`);
+                } catch (error) {
+                    log(`ERRO ao renderizar documento para ${row.VAR_NOME}: ${error.message}`);
+                    console.error("Erro do Docxtemplater:", error);
                 }
-                const zipBlob = zip.generate({ type: 'blob' });
-                saveAs(zipBlob, 'documentos_gerados.zip');
-                log("Download iniciado!");
             }
 
-            if (nomesComErro.length > 0) {
-                log("\nRegistros com erro encontrados:");
-                nomesComErro.forEach(nome => log(`- ${nome}`));
-            }
+            log("Compactando todos os arquivos...");
+            const zipBlob = zip.generate({ type: 'blob' });
+            saveAs(zipBlob, 'documentos_gerados.zip');
+            log("Download iniciado!");
 
         } catch (error) {
             log(`ERRO GERAL: ${error.message}`);
             console.error(error);
-            log("Processamento interrompido.");
+
         } finally {
             sendButton.disabled = false;
-            sendButton.textContent = "Gerar Documentos";
         }
     });
 });
