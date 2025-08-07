@@ -47,7 +47,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         try {
             const pyodide = await pyodideReadyPromise;
-            
+
             const excelFile = excelInput.files[0];
             const excelBuffer = await excelFile.arrayBuffer();
             const templateFile = docxInput.files[0];
