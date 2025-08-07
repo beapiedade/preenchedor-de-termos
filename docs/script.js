@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         sendButton.textContent = "Carregando";
 
         const pyodide = await loadPyodide();
-        await pyodide.loadPackage(["pandas", "micropip"]);
+        await pyodide.loadPackage(["pandas", "micropip", "lxml"]);
 
         const micropip = pyodide.pyimport("micropip");
         await micropip.install(["openpyxl", "python-docx", "docxtpl"]);
