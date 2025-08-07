@@ -9,23 +9,32 @@ document.addEventListener('DOMContentLoaded', async () => {
         logDiv.scrollTop = logDiv.scrollHeight;
     }
 
-    log("Carregando ambiente...");
-    sendButton.disabled = true;
-    sendButton.textContent = "Carregando";
+    async function setupPyodide() {
+        log("\nCarregando ambiente...");
+        sendButton.disabled = true;
+        sendButton.textContent = "Carregando";
 
-    const pyodide = await loadPyodide();
-    await pyodide.loadPackage(["pandas", "openpyxl", "python-docx", "docxtpl"]);
+        const pyodide = await loadPyodide();
+        await pyodide.loadPackage(["pandas", "micropip"]);
 
-    const extractorCode = await (await fetch('./backend/extractor.py')).text();
-    pyodide.runPython(extractorCode);
-    const factoryCode = await (await fetch('./backend/factory.py')).text();
-    pyodide.runPython(factoryCode);
-    const mainPythonCode = await (await fetch('./backend/main_python.py')).text();
-    pyodide.runPython(mainPythonCode);
+        const micropip = pyodide.pyimport("micropip");
+        await micropip.install(["openpyxl", "python-docx", "docxtpl"]);
 
-    log("Ambiente pronto!");
-    sendButton.disabled = false;
-    sendButton.textContent = "Gerar Documentos";
+        const extractorCode = await (await fetch('./extractor.py')).text();
+        const factoryCode = await (await fetch('./factory.py')).text();
+        const mainPythonCode = await (await fetch('./main_python.py')).text();
+        pyodide.runPython(extractorCode);
+        pyodide.runPython(factoryCode);
+        pyodide.runPython(mainPythonCode);
+
+        log("Ambiente pronto!");
+        sendButton.disabled = false;
+        sendButton.textContent = "Gerar Documentos";
+            
+        return pyodide;
+    }
+
+    const pyodideReadyPromise = setupPyodide();
 
     sendButton.addEventListener('click', async () => {
         if (!excelInput.files.length || !docxInput.files.length) {
@@ -37,6 +46,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         log("Iniciando processamento...");
 
         try {
+            const pyodide = await pyodideReadyPromise;
+            
             const excelFile = excelInput.files[0];
             const excelBuffer = await excelFile.arrayBuffer();
             const templateFile = docxInput.files[0];
